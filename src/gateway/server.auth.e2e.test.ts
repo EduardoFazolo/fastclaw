@@ -543,6 +543,21 @@ describe("gateway server auth/connect", () => {
       expect(res.error?.message ?? "").toContain("secure context");
       ws.close();
     });
+
+    test("allows control ui with shared auth without requiring pairing", async () => {
+      const ws = await openWs(port, { origin: originForPort(port) });
+      const res = await connectReq(ws, {
+        token: "secret",
+        client: {
+          id: GATEWAY_CLIENT_NAMES.CONTROL_UI,
+          version: "1.0.0",
+          platform: "web",
+          mode: GATEWAY_CLIENT_MODES.WEBCHAT,
+        },
+      });
+      expect(res.ok).toBe(true);
+      ws.close();
+    });
   });
 
   describe("tailscale auth", () => {
