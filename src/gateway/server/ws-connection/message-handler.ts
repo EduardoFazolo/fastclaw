@@ -649,9 +649,10 @@ export function attachGatewayWsMessageHandler(params: {
           return;
         }
 
-        // Fastclaw behavior: Control UI sessions authenticated with gateway shared
-        // secret (token/password) do not require device pairing.
-        const skipPairing = isControlUi && sharedAuthOk;
+        // Fastclaw behavior: shared-authenticated Control UI / CLI sessions do
+        // not require device pairing.
+        const skipPairing =
+          sharedAuthOk && (isControlUi || isGatewayCliClient(connectParams.client));
         if (device && devicePublicKey && !skipPairing) {
           const requirePairing = async (reason: string, _paired?: { deviceId: string }) => {
             const pairing = await requestDevicePairing({

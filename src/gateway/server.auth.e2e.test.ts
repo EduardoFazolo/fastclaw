@@ -558,6 +558,21 @@ describe("gateway server auth/connect", () => {
       expect(res.ok).toBe(true);
       ws.close();
     });
+
+    test("allows cli with shared auth without requiring pairing", async () => {
+      const ws = await openWs(port);
+      const res = await connectReq(ws, {
+        token: "secret",
+        client: {
+          id: GATEWAY_CLIENT_NAMES.CLI,
+          version: "1.0.0",
+          platform: "node",
+          mode: GATEWAY_CLIENT_MODES.CLI,
+        },
+      });
+      expect(res.ok).toBe(true);
+      ws.close();
+    });
   });
 
   describe("tailscale auth", () => {

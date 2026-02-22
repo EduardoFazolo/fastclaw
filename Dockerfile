@@ -8,7 +8,9 @@ RUN corepack enable
 
 WORKDIR /app
 
-ARG OPENCLAW_DOCKER_APT_PACKAGES=""
+# Fastclaw default: include free local Chromium so browser tools work out-of-the-box.
+# Override with --build-arg OPENCLAW_DOCKER_APT_PACKAGES="..." when needed.
+ARG OPENCLAW_DOCKER_APT_PACKAGES="chromium"
 RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
       apt-get update && \
       DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $OPENCLAW_DOCKER_APT_PACKAGES && \
