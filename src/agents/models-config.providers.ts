@@ -86,7 +86,8 @@ const XIAOMI_DEFAULT_COST = {
 };
 
 const MOONSHOT_BASE_URL = "https://api.moonshot.ai/v1";
-const MOONSHOT_DEFAULT_MODEL_ID = "kimi-k2.5";
+const MOONSHOT_DEFAULT_MODEL_ID = "kimi-k2";
+const MOONSHOT_COMPAT_MODEL_ID = "kimi-k2.5";
 const MOONSHOT_DEFAULT_CONTEXT_WINDOW = 256000;
 const MOONSHOT_DEFAULT_MAX_TOKENS = 8192;
 const MOONSHOT_DEFAULT_COST = {
@@ -472,6 +473,15 @@ function buildMoonshotProvider(): ProviderConfig {
     models: [
       {
         id: MOONSHOT_DEFAULT_MODEL_ID,
+        name: "Kimi K2",
+        reasoning: false,
+        input: ["text"],
+        cost: MOONSHOT_DEFAULT_COST,
+        contextWindow: MOONSHOT_DEFAULT_CONTEXT_WINDOW,
+        maxTokens: MOONSHOT_DEFAULT_MAX_TOKENS,
+      },
+      {
+        id: MOONSHOT_COMPAT_MODEL_ID,
         name: "Kimi K2.5",
         reasoning: false,
         input: ["text"],

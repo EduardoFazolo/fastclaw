@@ -11,8 +11,10 @@ export const DEFAULT_MINIMAX_MAX_TOKENS = 8192;
 
 export const MOONSHOT_BASE_URL = "https://api.moonshot.ai/v1";
 export const MOONSHOT_CN_BASE_URL = "https://api.moonshot.cn/v1";
-export const MOONSHOT_DEFAULT_MODEL_ID = "kimi-k2.5";
+export const MOONSHOT_DEFAULT_MODEL_ID = "kimi-k2";
 export const MOONSHOT_DEFAULT_MODEL_REF = `moonshot/${MOONSHOT_DEFAULT_MODEL_ID}`;
+export const MOONSHOT_COMPAT_MODEL_ID = "kimi-k2.5";
+export const MOONSHOT_COMPAT_MODEL_REF = `moonshot/${MOONSHOT_COMPAT_MODEL_ID}`;
 export const MOONSHOT_DEFAULT_CONTEXT_WINDOW = 256000;
 export const MOONSHOT_DEFAULT_MAX_TOKENS = 8192;
 export const KIMI_CODING_MODEL_ID = "k2p5";
@@ -125,16 +127,28 @@ export function buildMinimaxApiModelDefinition(modelId: string): ModelDefinition
   });
 }
 
-export function buildMoonshotModelDefinition(): ModelDefinitionConfig {
+export function buildMoonshotModelDefinition(params?: {
+  id?: string;
+  name?: string;
+}): ModelDefinitionConfig {
+  const modelId = params?.id?.trim() || MOONSHOT_DEFAULT_MODEL_ID;
+  const fallbackName = modelId === MOONSHOT_COMPAT_MODEL_ID ? "Kimi K2.5" : "Kimi K2";
   return {
-    id: MOONSHOT_DEFAULT_MODEL_ID,
-    name: "Kimi K2.5",
+    id: modelId,
+    name: params?.name?.trim() || fallbackName,
     reasoning: false,
     input: ["text"],
     cost: MOONSHOT_DEFAULT_COST,
     contextWindow: MOONSHOT_DEFAULT_CONTEXT_WINDOW,
     maxTokens: MOONSHOT_DEFAULT_MAX_TOKENS,
   };
+}
+
+export function buildMoonshotCompatModelDefinition(): ModelDefinitionConfig {
+  return buildMoonshotModelDefinition({
+    id: MOONSHOT_COMPAT_MODEL_ID,
+    name: "Kimi K2.5",
+  });
 }
 
 export function buildZaiModelDefinition(params: {

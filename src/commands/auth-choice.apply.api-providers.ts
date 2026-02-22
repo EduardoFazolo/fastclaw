@@ -138,7 +138,7 @@ export async function applyAuthChoiceApiProviders(
     const envKey = resolveEnvApiKey("moonshot");
     if (envKey) {
       const useExisting = await params.prompter.confirm({
-        message: `Use existing MOONSHOT_API_KEY (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`,
+        message: `Use existing Moonshot key (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`,
         initialValue: true,
       });
       if (useExisting) {

@@ -268,6 +268,34 @@ describe("getApiKeyForModel", () => {
     }
   });
 
+  it("prefers KIMI_K2_API_KEY over MOONSHOT_API_KEY for moonshot", async () => {
+    const previousKimi = process.env.KIMI_K2_API_KEY;
+    const previousMoonshot = process.env.MOONSHOT_API_KEY;
+
+    try {
+      process.env.KIMI_K2_API_KEY = "kimi-k2-test-key";
+      process.env.MOONSHOT_API_KEY = "moonshot-fallback-key";
+
+      const resolved = await resolveApiKeyForProvider({
+        provider: "moonshot",
+        store: { version: 1, profiles: {} },
+      });
+      expect(resolved.apiKey).toBe("kimi-k2-test-key");
+      expect(resolved.source).toContain("KIMI_K2_API_KEY");
+    } finally {
+      if (previousKimi === undefined) {
+        delete process.env.KIMI_K2_API_KEY;
+      } else {
+        process.env.KIMI_K2_API_KEY = previousKimi;
+      }
+      if (previousMoonshot === undefined) {
+        delete process.env.MOONSHOT_API_KEY;
+      } else {
+        process.env.MOONSHOT_API_KEY = previousMoonshot;
+      }
+    }
+  });
+
   it("resolves Qianfan API key from env", async () => {
     const previous = process.env.QIANFAN_API_KEY;
 

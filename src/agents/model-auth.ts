@@ -291,6 +291,10 @@ export function resolveEnvApiKey(provider: string): EnvApiKeyResult | null {
     return pick("HUGGINGFACE_HUB_TOKEN") ?? pick("HF_TOKEN");
   }
 
+  if (normalized === "moonshot") {
+    return pick("KIMI_K2_API_KEY") ?? pick("MOONSHOT_API_KEY");
+  }
+
   const envMap: Record<string, string> = {
     openai: "OPENAI_API_KEY",
     google: "GEMINI_API_KEY",
@@ -303,7 +307,6 @@ export function resolveEnvApiKey(provider: string): EnvApiKeyResult | null {
     litellm: "LITELLM_API_KEY",
     "vercel-ai-gateway": "AI_GATEWAY_API_KEY",
     "cloudflare-ai-gateway": "CLOUDFLARE_AI_GATEWAY_API_KEY",
-    moonshot: "MOONSHOT_API_KEY",
     minimax: "MINIMAX_API_KEY",
     nvidia: "NVIDIA_API_KEY",
     xiaomi: "XIAOMI_API_KEY",

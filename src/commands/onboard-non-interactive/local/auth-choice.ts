@@ -461,7 +461,7 @@ export async function applyNonInteractiveAuthChoice(params: {
       cfg: baseConfig,
       flagValue: opts.moonshotApiKey,
       flagName: "--moonshot-api-key",
-      envVar: "MOONSHOT_API_KEY",
+      envVar: "MOONSHOT_API_KEY or KIMI_K2_API_KEY",
       runtime,
     });
     if (!resolved) {

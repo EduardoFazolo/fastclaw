@@ -21,7 +21,11 @@ import { upsertPresence } from "../../../infra/system-presence.js";
 import { loadVoiceWakeConfig } from "../../../infra/voicewake.js";
 import { rawDataToString } from "../../../infra/ws.js";
 import type { createSubsystemLogger } from "../../../logging/subsystem.js";
-import { isGatewayCliClient, isWebchatClient } from "../../../utils/message-channel.js";
+import {
+  isGatewayBackendClient,
+  isGatewayCliClient,
+  isWebchatClient,
+} from "../../../utils/message-channel.js";
 import {
   AUTH_RATE_LIMIT_SCOPE_DEVICE_TOKEN,
   AUTH_RATE_LIMIT_SCOPE_SHARED_SECRET,
@@ -649,10 +653,13 @@ export function attachGatewayWsMessageHandler(params: {
           return;
         }
 
-        // Fastclaw behavior: shared-authenticated Control UI / CLI sessions do
-        // not require device pairing.
+        // Fastclaw behavior: shared-authenticated Control UI / CLI / backend
+        // sessions do not require device pairing.
         const skipPairing =
-          sharedAuthOk && (isControlUi || isGatewayCliClient(connectParams.client));
+          sharedAuthOk &&
+          (isControlUi ||
+            isGatewayCliClient(connectParams.client) ||
+            isGatewayBackendClient(connectParams.client));
         if (device && devicePublicKey && !skipPairing) {
           const requirePairing = async (reason: string, _paired?: { deviceId: string }) => {
             const pairing = await requestDevicePairing({

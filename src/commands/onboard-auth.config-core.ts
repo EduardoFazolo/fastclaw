@@ -56,6 +56,7 @@ import {
   applyProviderConfigWithModelCatalog,
 } from "./onboard-auth.config-shared.js";
 import {
+  buildMoonshotCompatModelDefinition,
   buildZaiModelDefinition,
   buildMoonshotModelDefinition,
   buildXaiModelDefinition,
@@ -64,6 +65,7 @@ import {
   KIMI_CODING_MODEL_REF,
   MOONSHOT_BASE_URL,
   MOONSHOT_CN_BASE_URL,
+  MOONSHOT_COMPAT_MODEL_REF,
   MOONSHOT_DEFAULT_MODEL_ID,
   MOONSHOT_DEFAULT_MODEL_REF,
   ZAI_DEFAULT_MODEL_ID,
@@ -179,15 +181,19 @@ function applyMoonshotProviderConfigWithBaseUrl(
     ...models[MOONSHOT_DEFAULT_MODEL_REF],
     alias: models[MOONSHOT_DEFAULT_MODEL_REF]?.alias ?? "Kimi",
   };
+  models[MOONSHOT_COMPAT_MODEL_REF] = {
+    ...models[MOONSHOT_COMPAT_MODEL_REF],
+    alias: models[MOONSHOT_COMPAT_MODEL_REF]?.alias ?? "Kimi K2.5",
+  };
 
-  const defaultModel = buildMoonshotModelDefinition();
+  const defaultModels = [buildMoonshotModelDefinition(), buildMoonshotCompatModelDefinition()];
 
-  return applyProviderConfigWithDefaultModel(cfg, {
+  return applyProviderConfigWithDefaultModels(cfg, {
     agentModels: models,
     providerId: "moonshot",
     api: "openai-completions",
     baseUrl,
-    defaultModel,
+    defaultModels,
     defaultModelId: MOONSHOT_DEFAULT_MODEL_ID,
   });
 }

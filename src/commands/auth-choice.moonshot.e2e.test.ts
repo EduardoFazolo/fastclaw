@@ -74,7 +74,7 @@ describe("applyAuthChoice (moonshot)", () => {
     );
     expect(result.config.agents?.defaults?.model?.primary).toBe("anthropic/claude-opus-4-5");
     expect(result.config.models?.providers?.moonshot?.baseUrl).toBe("https://api.moonshot.cn/v1");
-    expect(result.agentModelOverride).toBe("moonshot/kimi-k2.5");
+    expect(result.agentModelOverride).toBe("moonshot/kimi-k2");
 
     const parsed = await readAuthProfiles();
     expect(parsed.profiles?.["moonshot:default"]?.key).toBe("sk-moonshot-cn-test");
@@ -88,7 +88,7 @@ describe("applyAuthChoice (moonshot)", () => {
       setDefaultModel: true,
     });
 
-    expect(result.config.agents?.defaults?.model?.primary).toBe("moonshot/kimi-k2.5");
+    expect(result.config.agents?.defaults?.model?.primary).toBe("moonshot/kimi-k2");
     expect(result.config.models?.providers?.moonshot?.baseUrl).toBe("https://api.moonshot.cn/v1");
     expect(result.agentModelOverride).toBeUndefined();
 
