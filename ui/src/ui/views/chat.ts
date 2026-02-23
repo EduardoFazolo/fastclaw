@@ -7,6 +7,10 @@ import {
   renderStreamingGroup,
 } from "../chat/grouped-render.ts";
 import { normalizeMessage, normalizeRoleForGrouping } from "../chat/message-normalizer.ts";
+import type {
+  LoadBalancerModelOption,
+  LoadBalancerPlan,
+} from "../controllers/model-load-balancer.ts";
 import { icons } from "../icons.ts";
 import { detectTextDirection } from "../text-direction.ts";
 import type { SessionsListResult } from "../types.ts";
@@ -69,6 +73,30 @@ export type ChatProps = {
   onCloseSidebar?: () => void;
   onSplitRatioChange?: (ratio: number) => void;
   onChatScroll?: (event: Event) => void;
+  // Model load balancer
+  loadBalancerOpen?: boolean;
+  loadBalancerModelsLoading?: boolean;
+  loadBalancerModels?: LoadBalancerModelOption[];
+  loadBalancerCheapModel?: string;
+  loadBalancerExpensiveModel?: string;
+  loadBalancerJudgeModels?: string[];
+  loadBalancerTaskInput?: string;
+  loadBalancerPlanning?: boolean;
+  loadBalancerPlan?: LoadBalancerPlan | null;
+  loadBalancerAwaitingApproval?: boolean;
+  loadBalancerExecuting?: boolean;
+  loadBalancerLog?: string[];
+  loadBalancerError?: string | null;
+  onLoadBalancerToggle?: (open?: boolean) => void;
+  onLoadBalancerRefreshModels?: (force?: boolean) => void;
+  onLoadBalancerCheapModelChange?: (modelId: string) => void;
+  onLoadBalancerExpensiveModelChange?: (modelId: string) => void;
+  onLoadBalancerToggleJudge?: (modelId: string) => void;
+  onLoadBalancerTaskInputChange?: (next: string) => void;
+  onLoadBalancerUseDraft?: () => void;
+  onLoadBalancerPlan?: () => void;
+  onLoadBalancerExecute?: () => void;
+  onLoadBalancerReset?: () => void;
 };
 
 const COMPACTION_TOAST_DURATION_MS = 5000;
@@ -186,6 +214,237 @@ function renderAttachmentPreview(props: ChatProps) {
   `;
 }
 
+function formatModelOptionLabel(model: LoadBalancerModelOption): string {
+  const base = model.name && model.name !== model.id ? `${model.name} (${model.id})` : model.id;
+  return model.provider ? `${model.provider} · ${base}` : base;
+}
+
+function renderLoadBalancerPlan(plan: LoadBalancerPlan | null) {
+  if (!plan) {
+    return nothing;
+  }
+  return html`
+    <div class="chat-load-balancer__plan">
+      <div class="chat-load-balancer__plan-header">
+        <div class="chat-load-balancer__plan-title">Planned Pipeline</div>
+        <div class="chat-load-balancer__plan-meta">
+          ${plan.tasks.length} step${plan.tasks.length === 1 ? "" : "s"} · Judge
+          ${plan.judges.length === 1 ? "" : "s"}: ${plan.judges.join(", ")}
+        </div>
+      </div>
+      <div class="chat-load-balancer__plan-summary">${plan.summary}</div>
+      <div class="chat-load-balancer__task-list">
+        ${plan.tasks.map(
+          (task, index) => html`
+            <div class="chat-load-balancer__task">
+              <div class="chat-load-balancer__task-line">
+                <span
+                  class="chat-load-balancer__route chat-load-balancer__route--${task.role}"
+                  >${task.role.toUpperCase()}</span>
+                <span class="chat-load-balancer__task-index">Step ${index + 1}</span>
+              </div>
+              <div class="chat-load-balancer__task-title">${task.title}</div>
+              <div class="chat-load-balancer__task-instructions">${task.instructions}</div>
+              ${task.rationale
+                ? html`<div class="chat-load-balancer__task-rationale">${task.rationale}</div>`
+                : nothing}
+            </div>
+          `,
+        )}
+      </div>
+      <details class="chat-load-balancer__raw">
+        <summary>Judge output (raw)</summary>
+        <pre class="code-block">${plan.raw}</pre>
+      </details>
+    </div>
+  `;
+}
+
+function renderLoadBalancerPanel(props: ChatProps) {
+  if (!props.loadBalancerOpen) {
+    return nothing;
+  }
+  const models = props.loadBalancerModels ?? [];
+  const modelCount = models.length;
+  const judges = new Set(props.loadBalancerJudgeModels ?? []);
+  const cheapModel = props.loadBalancerCheapModel ?? "";
+  const expensiveModel = props.loadBalancerExpensiveModel ?? "";
+  const taskInput = props.loadBalancerTaskInput ?? "";
+  const planning = Boolean(props.loadBalancerPlanning);
+  const executing = Boolean(props.loadBalancerExecuting);
+  const awaitingApproval = Boolean(props.loadBalancerAwaitingApproval);
+  const log = props.loadBalancerLog ?? [];
+  const liveLogLines = log.slice(-80);
+  const canPlan =
+    modelCount > 0 &&
+    cheapModel !== "" &&
+    expensiveModel !== "" &&
+    cheapModel !== expensiveModel &&
+    taskInput.trim().length > 0 &&
+    judges.size > 0 &&
+    !planning &&
+    !executing;
+  const canStartPipeline =
+    awaitingApproval &&
+    !planning &&
+    !executing &&
+    cheapModel !== "" &&
+    expensiveModel !== "" &&
+    cheapModel !== expensiveModel;
+
+  return html`
+    <section class="chat-load-balancer">
+      <div class="chat-load-balancer__header">
+        <div>
+          <div class="chat-load-balancer__title">Model Load Balancer</div>
+          <div class="chat-load-balancer__subtitle">
+            Route easy work to cheap models, hard work to expensive models, and execute only after
+            manual approval.
+          </div>
+        </div>
+        <div class="chat-load-balancer__header-actions">
+          <button
+            class="btn btn--sm"
+            ?disabled=${Boolean(props.loadBalancerModelsLoading) || planning}
+            @click=${() => props.onLoadBalancerRefreshModels?.(true)}
+          >
+            ${props.loadBalancerModelsLoading ? "Loading..." : "Refresh models"}
+          </button>
+          <button
+            class="btn btn--sm"
+            ?disabled=${planning || executing}
+            @click=${() => props.onLoadBalancerReset?.()}
+          >
+            Clear state
+          </button>
+          <button
+            class="btn btn--sm"
+            ?disabled=${planning || executing}
+            @click=${() => props.onLoadBalancerToggle?.(false)}
+          >
+            ${icons.x}
+          </button>
+        </div>
+      </div>
+
+      <div class="chat-load-balancer__body">
+        <div class="chat-load-balancer__activity">
+          <div class="chat-load-balancer__activity-header">
+            <span>Live model activity</span>
+            <span>${liveLogLines.length} entr${liveLogLines.length === 1 ? "y" : "ies"}</span>
+          </div>
+          <pre class="chat-load-balancer__activity-stream">${liveLogLines.length > 0
+            ? liveLogLines.join("\n")
+            : "No model activity yet. Generate a plan or run the pipeline to stream logs here."}</pre>
+        </div>
+
+        ${
+          props.loadBalancerError
+            ? html`<div class="callout danger">${props.loadBalancerError}</div>`
+            : nothing
+        }
+
+        ${modelCount === 0
+          ? html`
+              <div class="callout">No models discovered yet. Click "Refresh models".</div>
+            `
+          : html`
+              <div class="chat-load-balancer__selectors">
+                <label class="field">
+                  <span>Cheap model</span>
+                  <select
+                    .value=${cheapModel}
+                    ?disabled=${planning || executing}
+                    @change=${(event: Event) =>
+                      props.onLoadBalancerCheapModelChange?.(
+                        (event.target as HTMLSelectElement).value,
+                      )}
+                  >
+                    ${models.map(
+                      (model) =>
+                        html`<option value=${model.ref}>${formatModelOptionLabel(model)}</option>`,
+                    )}
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Expensive model</span>
+                  <select
+                    .value=${expensiveModel}
+                    ?disabled=${planning || executing}
+                    @change=${(event: Event) =>
+                      props.onLoadBalancerExpensiveModelChange?.(
+                        (event.target as HTMLSelectElement).value,
+                      )}
+                  >
+                    ${models.map(
+                      (model) =>
+                        html`<option value=${model.ref}>${formatModelOptionLabel(model)}</option>`,
+                    )}
+                  </select>
+                </label>
+              </div>
+              <div class="chat-load-balancer__judges">
+                <div class="chat-load-balancer__judges-title">Judges (choose one or more)</div>
+                <div class="chat-load-balancer__judge-list">
+                  ${models.map((model) => {
+                    const checked = judges.has(model.ref);
+                    return html`
+                      <label class="chat-load-balancer__judge">
+                        <input
+                          type="checkbox"
+                          .checked=${checked}
+                          ?disabled=${planning || executing}
+                          @change=${() => props.onLoadBalancerToggleJudge?.(model.ref)}
+                        />
+                        <span>${formatModelOptionLabel(model)}</span>
+                      </label>
+                    `;
+                  })}
+                </div>
+              </div>
+            `}
+
+        <label class="field">
+          <span>Task for judges</span>
+          <textarea
+            .value=${taskInput}
+            ?disabled=${planning || executing}
+            rows="4"
+            placeholder="Describe the user task to split and route..."
+            @input=${(event: Event) =>
+              props.onLoadBalancerTaskInputChange?.((event.target as HTMLTextAreaElement).value)}
+          ></textarea>
+        </label>
+        <div class="chat-load-balancer__actions">
+          <button
+            class="btn btn--sm"
+            ?disabled=${planning || executing}
+            @click=${() => props.onLoadBalancerUseDraft?.()}
+          >
+            Use chat draft
+          </button>
+          <button
+            class="btn btn--sm primary"
+            ?disabled=${!canPlan}
+            @click=${() => props.onLoadBalancerPlan?.()}
+          >
+            ${planning ? "Planning..." : "Generate plan"}
+          </button>
+          <button
+            class="btn btn--sm primary"
+            ?disabled=${!canStartPipeline}
+            @click=${() => props.onLoadBalancerExecute?.()}
+          >
+            ${executing ? "Running..." : "Start pipeline"}
+          </button>
+        </div>
+
+        ${renderLoadBalancerPlan(props.loadBalancerPlan ?? null)}
+      </div>
+    </section>
+  `;
+}
+
 export function renderChat(props: ChatProps) {
   const canCompose = props.connected;
   const isBusy = props.sending || props.stream !== null;
@@ -268,6 +527,8 @@ export function renderChat(props: ChatProps) {
       ${props.disabledReason ? html`<div class="callout">${props.disabledReason}</div>` : nothing}
 
       ${props.error ? html`<div class="callout danger">${props.error}</div>` : nothing}
+
+      ${renderLoadBalancerPanel(props)}
 
       ${
         props.focusMode

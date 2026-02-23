@@ -40,6 +40,8 @@ function resetChatStateForSessionSwitch(state: AppViewState, sessionKey: string)
   state.chatRunId = null;
   (state as unknown as OpenClawApp).resetToolStream();
   (state as unknown as OpenClawApp).resetChatScroll();
+  state.chatLoadBalancerOpen = false;
+  state.resetLoadBalancerWorkflow();
   state.applySettings({
     ...state.settings,
     sessionKey,
@@ -93,6 +95,13 @@ export function renderChatControls(state: AppViewState) {
   const disableFocusToggle = state.onboarding;
   const showThinking = state.onboarding ? false : state.settings.chatShowThinking;
   const focusActive = state.onboarding ? true : state.settings.chatFocusMode;
+  const loadBalancerStatus = state.chatLoadBalancerExecuting
+    ? "Pipeline running"
+    : state.chatLoadBalancerPlanning
+      ? "Planning..."
+      : state.chatLoadBalancerAwaitingApproval
+        ? "Awaiting approval"
+        : null;
   // Refresh icon
   const refreshIcon = html`
     <svg
@@ -147,6 +156,8 @@ export function renderChatControls(state: AppViewState) {
               sessionKey: next,
               lastActiveSessionKey: next,
             });
+            state.chatLoadBalancerOpen = false;
+            state.resetLoadBalancerWorkflow();
             void state.loadAssistantIdentity();
             syncUrlWithSessionKey(
               state as unknown as Parameters<typeof syncUrlWithSessionKey>[0],
@@ -226,6 +237,23 @@ export function renderChatControls(state: AppViewState) {
       >
         ${focusIcon}
       </button>
+      <span class="chat-controls__separator">|</span>
+      <button
+        class="btn btn--sm chat-controls__load-balancer ${state.chatLoadBalancerOpen ? "active" : ""}"
+        ?disabled=${state.onboarding}
+        @click=${() => {
+          void state.handleLoadBalancerToggle();
+        }}
+        title="Open model load balancer"
+      >
+        <span class="chat-controls__load-balancer-icon">${icons.puzzle}</span>
+        <span>Load Balancer</span>
+      </button>
+      ${
+        loadBalancerStatus
+          ? html`<span class="chat-controls__lb-status">${loadBalancerStatus}</span>`
+          : null
+      }
     </div>
   `;
 }

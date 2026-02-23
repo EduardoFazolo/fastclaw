@@ -216,7 +216,7 @@ export async function resolveApiKeyForProvider(params: {
     const hasCodex = listProfilesForProvider(store, "openai-codex").length > 0;
     if (hasCodex) {
       throw new Error(
-        'No API key found for provider "openai". You are authenticated with OpenAI Codex OAuth. Use openai-codex/gpt-5.3-codex (OAuth) or set OPENAI_API_KEY to use openai/gpt-5.1-codex.',
+        'No API key found for provider "openai". You are authenticated with OpenAI Codex OAuth. Use openai-codex/gpt-5.3-codex (OAuth) or set OPENAI_API_KEY (OPEN_AI_KEY also supported) to use openai/gpt-5.1-codex.',
       );
     }
   }
@@ -295,8 +295,11 @@ export function resolveEnvApiKey(provider: string): EnvApiKeyResult | null {
     return pick("KIMI_K2_API_KEY") ?? pick("MOONSHOT_API_KEY");
   }
 
+  if (normalized === "openai") {
+    return pick("OPENAI_API_KEY") ?? pick("OPEN_AI_KEY");
+  }
+
   const envMap: Record<string, string> = {
-    openai: "OPENAI_API_KEY",
     google: "GEMINI_API_KEY",
     voyage: "VOYAGE_API_KEY",
     groq: "GROQ_API_KEY",

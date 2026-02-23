@@ -802,6 +802,8 @@ export function renderApp(state: AppViewState) {
                     sessionKey: next,
                     lastActiveSessionKey: next,
                   });
+                  state.chatLoadBalancerOpen = false;
+                  state.resetLoadBalancerWorkflow();
                   void state.loadAssistantIdentity();
                   void loadChatHistory(state);
                   void refreshChatAvatar(state);
@@ -858,6 +860,50 @@ export function renderApp(state: AppViewState) {
                 onSplitRatioChange: (ratio: number) => state.handleSplitRatioChange(ratio),
                 assistantName: state.assistantName,
                 assistantAvatar: state.assistantAvatar,
+                loadBalancerOpen: state.chatLoadBalancerOpen,
+                loadBalancerModelsLoading: state.chatLoadBalancerModelsLoading,
+                loadBalancerModels: state.chatLoadBalancerModels,
+                loadBalancerCheapModel: state.chatLoadBalancerCheapModel,
+                loadBalancerExpensiveModel: state.chatLoadBalancerExpensiveModel,
+                loadBalancerJudgeModels: state.chatLoadBalancerJudgeModels,
+                loadBalancerTaskInput: state.chatLoadBalancerTaskInput,
+                loadBalancerPlanning: state.chatLoadBalancerPlanning,
+                loadBalancerPlan: state.chatLoadBalancerPlan,
+                loadBalancerAwaitingApproval: state.chatLoadBalancerAwaitingApproval,
+                loadBalancerExecuting: state.chatLoadBalancerExecuting,
+                loadBalancerLog: state.chatLoadBalancerLog,
+                loadBalancerError: state.chatLoadBalancerError,
+                onLoadBalancerToggle: (open?: boolean) => void state.handleLoadBalancerToggle(open),
+                onLoadBalancerRefreshModels: (force?: boolean) =>
+                  void state.handleLoadBalancerRefreshModels(force),
+                onLoadBalancerCheapModelChange: (modelId: string) => {
+                  state.chatLoadBalancerCheapModel = modelId;
+                },
+                onLoadBalancerExpensiveModelChange: (modelId: string) => {
+                  state.chatLoadBalancerExpensiveModel = modelId;
+                },
+                onLoadBalancerToggleJudge: (modelId: string) => {
+                  const next = new Set(state.chatLoadBalancerJudgeModels);
+                  if (next.has(modelId)) {
+                    next.delete(modelId);
+                  } else {
+                    next.add(modelId);
+                  }
+                  state.chatLoadBalancerJudgeModels = [...next];
+                },
+                onLoadBalancerTaskInputChange: (next: string) => {
+                  state.chatLoadBalancerTaskInput = next;
+                },
+                onLoadBalancerUseDraft: () => {
+                  const draft = state.chatMessage.trim();
+                  if (!draft) {
+                    return;
+                  }
+                  state.chatLoadBalancerTaskInput = draft;
+                },
+                onLoadBalancerPlan: () => void state.handleLoadBalancerPlan(),
+                onLoadBalancerExecute: () => void state.handleLoadBalancerExecute(),
+                onLoadBalancerReset: () => state.resetLoadBalancerWorkflow(),
               })
             : nothing
         }

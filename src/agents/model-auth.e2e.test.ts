@@ -434,6 +434,54 @@ describe("getApiKeyForModel", () => {
     }
   });
 
+  it("resolveEnvApiKey('openai') returns OPEN_AI_KEY when OPENAI_API_KEY is missing", async () => {
+    const previousCanonical = process.env.OPENAI_API_KEY;
+    const previousCompatibility = process.env.OPEN_AI_KEY;
+    try {
+      delete process.env.OPENAI_API_KEY;
+      process.env.OPEN_AI_KEY = "sk-openai-compat";
+
+      const resolved = resolveEnvApiKey("openai");
+      expect(resolved?.apiKey).toBe("sk-openai-compat");
+      expect(resolved?.source).toContain("OPEN_AI_KEY");
+    } finally {
+      if (previousCanonical === undefined) {
+        delete process.env.OPENAI_API_KEY;
+      } else {
+        process.env.OPENAI_API_KEY = previousCanonical;
+      }
+      if (previousCompatibility === undefined) {
+        delete process.env.OPEN_AI_KEY;
+      } else {
+        process.env.OPEN_AI_KEY = previousCompatibility;
+      }
+    }
+  });
+
+  it("resolveEnvApiKey('openai') prefers OPENAI_API_KEY over OPEN_AI_KEY", async () => {
+    const previousCanonical = process.env.OPENAI_API_KEY;
+    const previousCompatibility = process.env.OPEN_AI_KEY;
+    try {
+      process.env.OPENAI_API_KEY = "sk-openai-canonical";
+      process.env.OPEN_AI_KEY = "sk-openai-compat";
+
+      const resolved = resolveEnvApiKey("openai");
+      expect(resolved?.apiKey).toBe("sk-openai-canonical");
+      expect(resolved?.source).toContain("OPENAI_API_KEY");
+    } finally {
+      if (previousCanonical === undefined) {
+        delete process.env.OPENAI_API_KEY;
+      } else {
+        process.env.OPENAI_API_KEY = previousCanonical;
+      }
+      if (previousCompatibility === undefined) {
+        delete process.env.OPEN_AI_KEY;
+      } else {
+        process.env.OPEN_AI_KEY = previousCompatibility;
+      }
+    }
+  });
+
   it("resolveEnvApiKey('huggingface') returns HUGGINGFACE_HUB_TOKEN when set", async () => {
     const prevHub = process.env.HUGGINGFACE_HUB_TOKEN;
     const prevHf = process.env.HF_TOKEN;

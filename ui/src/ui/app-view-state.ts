@@ -3,6 +3,10 @@ import type { CompactionStatus } from "./app-tool-stream.ts";
 import type { DevicePairingList } from "./controllers/devices.ts";
 import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
 import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
+import type {
+  LoadBalancerModelOption,
+  LoadBalancerPlan,
+} from "./controllers/model-load-balancer.ts";
 import type { SkillMessage } from "./controllers/skills.ts";
 import type { GatewayBrowserClient, GatewayHelloOk } from "./gateway.ts";
 import type { Tab } from "./navigation.ts";
@@ -65,6 +69,19 @@ export type AppViewState = {
   chatThinkingLevel: string | null;
   chatQueue: ChatQueueItem[];
   chatManualRefreshInFlight: boolean;
+  chatLoadBalancerOpen: boolean;
+  chatLoadBalancerModelsLoading: boolean;
+  chatLoadBalancerModels: LoadBalancerModelOption[];
+  chatLoadBalancerCheapModel: string;
+  chatLoadBalancerExpensiveModel: string;
+  chatLoadBalancerJudgeModels: string[];
+  chatLoadBalancerTaskInput: string;
+  chatLoadBalancerPlanning: boolean;
+  chatLoadBalancerPlan: LoadBalancerPlan | null;
+  chatLoadBalancerAwaitingApproval: boolean;
+  chatLoadBalancerExecuting: boolean;
+  chatLoadBalancerLog: string[];
+  chatLoadBalancerError: string | null;
   nodesLoading: boolean;
   nodes: Array<Record<string, unknown>>;
   chatNewMessagesBelow: boolean;
@@ -275,6 +292,11 @@ export type AppViewState = {
   setChatMessage: (next: string) => void;
   handleSendChat: (messageOverride?: string, opts?: { restoreDraft?: boolean }) => Promise<void>;
   handleAbortChat: () => Promise<void>;
+  handleLoadBalancerToggle: (open?: boolean) => Promise<void>;
+  handleLoadBalancerRefreshModels: (force?: boolean) => Promise<void>;
+  handleLoadBalancerPlan: () => Promise<void>;
+  handleLoadBalancerExecute: () => Promise<void>;
+  resetLoadBalancerWorkflow: () => void;
   removeQueuedMessage: (id: string) => void;
   handleChatScroll: (event: Event) => void;
   resetToolStream: () => void;

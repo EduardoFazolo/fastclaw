@@ -218,78 +218,86 @@ describe("gateway server models + voicewake", () => {
   });
 
   test("models.list returns model catalog", async () => {
-    piSdkMock.enabled = true;
-    piSdkMock.models = [
-      { id: "gpt-test-z", provider: "openai", contextWindow: 0 },
-      {
-        id: "gpt-test-a",
-        name: "A-Model",
-        provider: "openai",
-        contextWindow: 8000,
-      },
-      {
-        id: "claude-test-b",
-        name: "B-Model",
-        provider: "anthropic",
-        contextWindow: 1000,
-      },
-      {
-        id: "claude-test-a",
-        name: "A-Model",
-        provider: "anthropic",
-        contextWindow: 200_000,
-      },
-    ];
+    const envSnapshot = captureEnv(["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]);
+    try {
+      process.env.OPENAI_API_KEY = "sk-openai-test";
+      process.env.ANTHROPIC_API_KEY = "sk-ant-test";
 
-    const res1 = await rpcReq<{
-      models: Array<{
-        id: string;
-        name: string;
-        provider: string;
-        contextWindow?: number;
-      }>;
-    }>(ws, "models.list");
+      piSdkMock.enabled = true;
+      piSdkMock.models = [
+        { id: "gpt-test-z", provider: "openai", contextWindow: 0 },
+        {
+          id: "gpt-test-a",
+          name: "A-Model",
+          provider: "openai",
+          contextWindow: 8000,
+        },
+        {
+          id: "claude-test-b",
+          name: "B-Model",
+          provider: "anthropic",
+          contextWindow: 1000,
+        },
+        {
+          id: "claude-test-a",
+          name: "A-Model",
+          provider: "anthropic",
+          contextWindow: 200_000,
+        },
+      ];
 
-    const res2 = await rpcReq<{
-      models: Array<{
-        id: string;
-        name: string;
-        provider: string;
-        contextWindow?: number;
-      }>;
-    }>(ws, "models.list");
+      const res1 = await rpcReq<{
+        models: Array<{
+          id: string;
+          name: string;
+          provider: string;
+          contextWindow?: number;
+        }>;
+      }>(ws, "models.list");
 
-    expect(res1.ok).toBe(true);
-    expect(res2.ok).toBe(true);
+      const res2 = await rpcReq<{
+        models: Array<{
+          id: string;
+          name: string;
+          provider: string;
+          contextWindow?: number;
+        }>;
+      }>(ws, "models.list");
 
-    const models = res1.payload?.models ?? [];
-    expect(models).toEqual([
-      {
-        id: "claude-test-a",
-        name: "A-Model",
-        provider: "anthropic",
-        contextWindow: 200_000,
-      },
-      {
-        id: "claude-test-b",
-        name: "B-Model",
-        provider: "anthropic",
-        contextWindow: 1000,
-      },
-      {
-        id: "gpt-test-a",
-        name: "A-Model",
-        provider: "openai",
-        contextWindow: 8000,
-      },
-      {
-        id: "gpt-test-z",
-        name: "gpt-test-z",
-        provider: "openai",
-      },
-    ]);
+      expect(res1.ok).toBe(true);
+      expect(res2.ok).toBe(true);
 
-    expect(piSdkMock.discoverCalls).toBe(1);
+      const models = res1.payload?.models ?? [];
+      expect(models).toEqual([
+        {
+          id: "claude-test-a",
+          name: "A-Model",
+          provider: "anthropic",
+          contextWindow: 200_000,
+        },
+        {
+          id: "claude-test-b",
+          name: "B-Model",
+          provider: "anthropic",
+          contextWindow: 1000,
+        },
+        {
+          id: "gpt-test-a",
+          name: "A-Model",
+          provider: "openai",
+          contextWindow: 8000,
+        },
+        {
+          id: "gpt-test-z",
+          name: "gpt-test-z",
+          provider: "openai",
+        },
+      ]);
+
+      expect(piSdkMock.discoverCalls).toBe(1);
+    } finally {
+      envSnapshot.restore();
+    }
   });
 
   test("models.list rejects unknown params", async () => {

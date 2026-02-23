@@ -52,9 +52,19 @@ import {
 import type { AppViewState } from "./app-view-state.ts";
 import { normalizeAssistantIdentity } from "./assistant-identity.ts";
 import { loadAssistantIdentity as loadAssistantIdentityInternal } from "./controllers/assistant-identity.ts";
+import { loadChatHistory } from "./controllers/chat.ts";
 import type { DevicePairingList } from "./controllers/devices.ts";
 import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
 import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
+import {
+  executeLoadBalancedPipeline as executeLoadBalancedPipelineInternal,
+  loadLoadBalancerModels as loadLoadBalancerModelsInternal,
+  planLoadBalancedPipeline as planLoadBalancedPipelineInternal,
+  resetLoadBalancerWorkflow as resetLoadBalancerWorkflowInternal,
+  type LoadBalancerModelOption,
+  type LoadBalancerPlan,
+} from "./controllers/model-load-balancer.ts";
+import { loadSessions } from "./controllers/sessions.ts";
 import type { SkillMessage } from "./controllers/skills.ts";
 import type { GatewayBrowserClient, GatewayHelloOk } from "./gateway.ts";
 import type { Tab } from "./navigation.ts";
@@ -145,6 +155,19 @@ export class OpenClawApp extends LitElement {
   @state() chatQueue: ChatQueueItem[] = [];
   @state() chatAttachments: ChatAttachment[] = [];
   @state() chatManualRefreshInFlight = false;
+  @state() chatLoadBalancerOpen = false;
+  @state() chatLoadBalancerModelsLoading = false;
+  @state() chatLoadBalancerModels: LoadBalancerModelOption[] = [];
+  @state() chatLoadBalancerCheapModel = "";
+  @state() chatLoadBalancerExpensiveModel = "";
+  @state() chatLoadBalancerJudgeModels: string[] = [];
+  @state() chatLoadBalancerTaskInput = "";
+  @state() chatLoadBalancerPlanning = false;
+  @state() chatLoadBalancerPlan: LoadBalancerPlan | null = null;
+  @state() chatLoadBalancerAwaitingApproval = false;
+  @state() chatLoadBalancerExecuting = false;
+  @state() chatLoadBalancerLog: string[] = [];
+  @state() chatLoadBalancerError: string | null = null;
   // Sidebar state for tool output viewing
   @state() sidebarOpen = false;
   @state() sidebarContent: string | null = null;
@@ -459,6 +482,33 @@ export class OpenClawApp extends LitElement {
       messageOverride,
       opts,
     );
+  }
+
+  async handleLoadBalancerToggle(open?: boolean) {
+    const nextOpen = typeof open === "boolean" ? open : !this.chatLoadBalancerOpen;
+    this.chatLoadBalancerOpen = nextOpen;
+    if (nextOpen && this.chatLoadBalancerModels.length === 0) {
+      await this.handleLoadBalancerRefreshModels();
+    }
+  }
+
+  async handleLoadBalancerRefreshModels(force = false) {
+    await loadLoadBalancerModelsInternal(this, { force });
+  }
+
+  async handleLoadBalancerPlan() {
+    await planLoadBalancedPipelineInternal(this);
+  }
+
+  async handleLoadBalancerExecute() {
+    await executeLoadBalancedPipelineInternal(this, {
+      refreshChatHistory: () => loadChatHistory(this),
+      refreshSessions: () => loadSessions(this),
+    });
+  }
+
+  resetLoadBalancerWorkflow() {
+    resetLoadBalancerWorkflowInternal(this);
   }
 
   async handleWhatsAppStart(force: boolean) {
